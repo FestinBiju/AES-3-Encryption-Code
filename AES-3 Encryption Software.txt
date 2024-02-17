@@ -1,0 +1,73 @@
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import padding
+import secrets
+
+history = []
+
+def generate_random_key():
+    return secrets.token_bytes(32)  # Generate a 256-bit (32-byte) key
+
+def encrypt_aes(text, key):
+    padder = padding.PKCS7(128).padder()
+    padded_text = padder.update(text.encode()) + padder.finalize()
+
+    cipher = Cipher(algorithms.AES(key), modes.ECB(), backend=default_backend())
+    encryptor = cipher.encryptor()
+    encrypted_text = encryptor.update(padded_text) + encryptor.finalize()
+    return encrypted_text
+
+def decrypt_aes(encrypted_text, key):
+    cipher = Cipher(algorithms.AES(key), modes.ECB(), backend=default_backend())
+    decryptor = cipher.decryptor()
+    decrypted_padded_text = decryptor.update(encrypted_text) + decryptor.finalize()
+
+    unpadder = padding.PKCS7(128).unpadder()
+    decrypted_text = unpadder.update(decrypted_padded_text) + unpadder.finalize()
+    return decrypted_text.decode()
+
+def show_history():
+    print("\nEncryption and Decryption History:")
+    for index, entry in enumerate(history, start=1):
+        print(f"{index}. {entry}")
+
+def main():
+    key = None  # Initialize key to None
+
+    while True:
+        print("\nMenu:")
+        print("1. Encrypt (AES-3)")
+        print("2. Decrypt (AES-3)")
+        print("3. Show History")
+        print("4. Exit")
+        choice = input("Enter your choice: ")
+
+        if choice == '1':
+            text = input("Enter the text to encrypt: ")
+            if key is None:
+                key = generate_random_key()
+                print(f"Generated key: {key.hex()}")
+
+            encrypted_text = encrypt_aes(text, key)
+            history.append(f"Encrypted: {text} -> {encrypted_text.hex()} with key: {key.hex()}")
+            print("Encrypted:", encrypted_text.hex())
+        elif choice == '2':
+            if key is None:
+                print("Please generate a key first (Option 1) or provide a key.")
+                continue
+
+            encrypted_text_hex = input("Enter the hexadecimal representation of the encrypted text: ")
+            encrypted_text = bytes.fromhex(encrypted_text_hex)
+            decrypted_text = decrypt_aes(encrypted_text, key)
+            history.append(f"Decrypted: {encrypted_text_hex} -> {decrypted_text} with key: {key.hex()}")
+            print("Decrypted:", decrypted_text)
+        elif choice == '3':
+            show_history()
+        elif choice == '4':
+            print("Exiting...")
+            break
+        else:
+            print("Invalid choice. Please enter a valid option.")
+
+if __name__ == "__main__":
+    main()
